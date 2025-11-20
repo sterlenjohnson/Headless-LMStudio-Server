@@ -1,0 +1,9 @@
+[Unit]
+Description=LM Studio Auto-Update Runner
+
+[Service]
+Type=oneshot
+ExecStart=/opt/lmstudio/update-lmstudio.sh
+User=root
+StandardOutput=journal
+StandardError=journal
