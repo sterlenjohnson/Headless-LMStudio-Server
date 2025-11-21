@@ -1,33 +1,25 @@
 [Unit]
 Description=LM Studio Headless Service
-
-Start only after network is ready
-
+# Start only after network is ready
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-
-Run as your specific user, not root
-
+# Run as your specific user, not root
+# IMPORTANT: Replace <YOUR_USERNAME> with your actual Linux username
 User=<YOUR_USERNAME>
 Group=<YOUR_USERNAME>
 
-The script that runs the application
-
+# The script that runs the application
 ExecStart=/opt/lmstudio/lmstudio-run.sh
 
-Restart automatically if it crashes
-
+# Restart automatically if it crashes
 Restart=always
 RestartSec=10
 
-Set a generous timeout for startup, as models can take time to load
-
+# Set timeout for startup (models can take time to load)
 TimeoutStartSec=300
 
 [Install]
-
-CRUCIAL: Starts at boot before any user logs in
-
+# CRUCIAL: Starts at boot before any user logs in
 WantedBy=multi-user.target

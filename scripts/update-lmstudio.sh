@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# This script handles stopping the service, downloading the latest AppImage,
-# extracting it, and restarting the service.
+# LM Studio Auto-Update Script
+# This script downloads the latest LM Studio AppImage, extracts it, and restarts the service
 
+# IMPORTANT: Replace <YOUR_USERNAME> with your actual Linux username
 SERVICE_USER="<YOUR_USERNAME>"
 INSTALL_DIR="/opt/lmstudio"
 DOWNLOAD_URL="https://lmstudio.ai/download/latest/linux/x64"
@@ -11,7 +12,7 @@ NEW_FILE="LM-Studio-latest.AppImage"
 echo "$(date): Starting Update..." | tee -a "$INSTALL_DIR/update.log"
 cd "$INSTALL_DIR" || exit 1
 
-# 1. Download latest
+# 1. Download latest version
 echo "Downloading latest version..."
 wget -q --show-progress -O "$NEW_FILE.tmp" "$DOWNLOAD_URL"
 if [ $? -ne 0 ]; then
@@ -33,7 +34,6 @@ chmod +x "$NEW_FILE"
 
 # 4. Extract (Crucial for headless execution)
 echo "Extracting AppImage..."
-# Redirecting output to /dev/null to keep logs clean
 ./"$NEW_FILE" --appimage-extract > /dev/null
 
 # 5. Fix Permissions

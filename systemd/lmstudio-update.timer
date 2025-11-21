@@ -2,10 +2,8 @@
 Description=Weekly Timer for LM Studio Updates
 
 [Timer]
-
-Runs every Monday at 4:00 AM (adjust to your preferred time)
-
-OnCalendar=Mon --* 04:00:00
+# Runs every Monday at 4:00 AM
+OnCalendar=Mon *-*-* 04:00:00
 Persistent=true
 Unit=lmstudio-update.service
 
