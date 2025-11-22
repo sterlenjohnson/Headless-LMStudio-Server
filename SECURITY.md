@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Reporting a Vulnerability
-If you discover a security vulnerability, please report it privately by emailing `security@sterlenjohnson.com`. Include:
+If you discover a security vulnerability, please report it. Include:
 - A description of the vulnerability
 - Steps to reproduce
 - Potential impact
