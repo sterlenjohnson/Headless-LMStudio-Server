@@ -37,13 +37,39 @@ While LM Studio is excellent for desktop use, running it as a true server presen
 
 **Acknowledgments**: This guide was inspired by community efforts, including work by Angelo Artuso and the run.tournament.org.il project, but provides a more comprehensive and automated solution for true headless deployments.
 
-**Testing Status**: This guide has been tested on Ubuntu 24.04, Fedora 40, and Arch Linux. Report issues via GitHub issues.
+**Testing Status**: This guide has been tested on Ubuntu 24.04, Fedora 43, and Arch Linux. Report issues via [GitHub Issues](https://github.com/sterlenjohnson/Headless-LMStudio-Server/issues).
 
 **Resource Requirements**:
 - Minimum 16GB RAM (32GB+ recommended for larger models)
 - GPU with adequate VRAM for your target models (8GB+ recommended)
 - At least 50GB free storage for models and updates
 - x86_64 processor with AVX2 support
+
+---
+
+## 🚀 Quick Start
+
+If you want to jump right in:
+
+```bash
+# 1. Clone this repository
+git clone https://github.com/sterlenjohnson/Headless-LMStudio-Server.git
+cd Headless-LMStudio-Server
+
+# 2. Install dependencies (choose your distribution)
+# Debian/Ubuntu:
+sudo apt install wget xvfb
+# Fedora:
+sudo dnf install wget xorg-x11-server-Xvfb
+# Arch:
+sudo pacman -S wget xorg-server-xvfb
+
+# 3. Follow the detailed setup steps below to:
+#    - Copy scripts to /opt/lmstudio/
+#    - Copy systemd files to /etc/systemd/system/
+#    - Replace <YOUR_USERNAME> placeholders
+#    - Download and extract LM Studio
+```
 
 ---
 
@@ -88,7 +114,25 @@ sudo mkdir -p /opt/lmstudio
 sudo chown <YOUR_USERNAME>:<YOUR_USERNAME> /opt/lmstudio
 ```
 
-### 2. Download the AppImage Manually (Initial Run)
+### 2. Copy Scripts from Repository
+
+If you cloned this repository, copy the scripts to the installation directory:
+
+```bash
+# From within the cloned repository directory
+cp scripts/lmstudio-run.sh /opt/lmstudio/
+cp scripts/update-lmstudio.sh /opt/lmstudio/
+
+# Make them executable
+chmod +x /opt/lmstudio/lmstudio-run.sh
+chmod +x /opt/lmstudio/update-lmstudio.sh
+
+# Edit the scripts to replace <YOUR_USERNAME> with your actual username
+sed -i 's/<YOUR_USERNAME>/'"$USER"'/g' /opt/lmstudio/lmstudio-run.sh
+sed -i 's/<YOUR_USERNAME>/'"$USER"'/g' /opt/lmstudio/update-lmstudio.sh
+```
+
+### 3. Download the AppImage Manually (Initial Run)
 
 The service relies on the file being present and extracted. Download the latest version now:
 
@@ -98,7 +142,7 @@ wget -O LM-Studio-latest.AppImage https://lmstudio.ai/download/latest/linux/x64
 chmod +x LM-Studio-latest.AppImage
 ```
 
-### 3. Extract the AppImage
+### 4. Extract the AppImage
 
 ```bash
 ./LM-Studio-latest.AppImage --appimage-extract
@@ -111,6 +155,8 @@ This creates a `squashfs-root` directory with the actual application.
 ## ⚙ Step 2: The Run Script (Headless Engine)
 
 This wrapper script launches the extracted AppImage binary using `xvfb-run`. This is what the Systemd service will execute.
+
+If you copied the script from the repository in Step 1, it's already in place at `/opt/lmstudio/lmstudio-run.sh`. Otherwise, create it manually:
 
 **Create:** `/opt/lmstudio/lmstudio-run.sh`
 
@@ -139,6 +185,18 @@ chmod +x /opt/lmstudio/lmstudio-run.sh
 ## 🚀 Step 3: The Main Systemd Service
 
 This is the core unit file that starts your server at boot.
+
+If you cloned the repository, copy the systemd file and update the username:
+
+```bash
+# Copy from repository to system location
+sudo cp systemd/lmstudio.service /etc/systemd/system/
+
+# Edit to replace <YOUR_USERNAME> with your actual username
+sudo sed -i 's/<YOUR_USERNAME>/'"$USER"'/g' /etc/systemd/system/lmstudio.service
+```
+
+Or create it manually:
 
 **Create:** `/etc/systemd/system/lmstudio.service`
 
@@ -178,6 +236,8 @@ Since the download URL is stable, we can create a Systemd Timer to handle period
 ### 1. Create the Update Script
 
 This script downloads the new file, performs the necessary **extraction** (which overwrites the `squashfs-root` folder), and fixes permissions.
+
+If you copied from the repository in Step 1, the script is already at `/opt/lmstudio/update-lmstudio.sh`. Otherwise, create it manually:
 
 **Create:** `/opt/lmstudio/update-lmstudio.sh`
 
@@ -234,6 +294,16 @@ sudo chmod +x /opt/lmstudio/update-lmstudio.sh
 ```
 
 ### 2. Create the Update Service and Timer
+
+If you cloned the repository, copy the systemd files:
+
+```bash
+# Copy update service and timer from repository
+sudo cp systemd/lmstudio-update.service /etc/systemd/system/
+sudo cp systemd/lmstudio-update.timer /etc/systemd/system/
+```
+
+Or create them manually:
 
 **Update Service (`/etc/systemd/system/lmstudio-update.service`):**
 
@@ -486,7 +556,7 @@ This guide is released under the MIT License. Feel free to modify and distribute
 ```
 MIT License
 
-Copyright (c) 2025 [Your Name/Username]
+Copyright (c) 2025 Sterlen Johnson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
