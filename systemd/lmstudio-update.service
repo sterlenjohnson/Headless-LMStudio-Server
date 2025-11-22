@@ -1,11 +1,9 @@
 [Unit]
-Description=Weekly Timer for LM Studio Updates
+Description=LM Studio Auto-Update Runner
 
-[Timer]
-# Runs every Monday at 4:00 AM
-OnCalendar=Mon *-*-* 04:00:00
-Persistent=true
-Unit=lmstudio-update.service
-
-[Install]
-WantedBy=timers.target
+[Service]
+Type=oneshot
+ExecStart=/opt/lmstudio/update-lmstudio.sh
+User=root
+StandardOutput=journal
+StandardError=journal
