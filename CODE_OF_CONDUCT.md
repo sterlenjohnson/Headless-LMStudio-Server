@@ -11,9 +11,6 @@ We as members, contributors, and maintainers pledge to make participation in thi
 - **Avoid harassment** – No trolling, insulting, or demeaning remarks.
 - **Report issues** – If you experience or witness harassment, contact the project maintainers.
 
-## Enforcement
-
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported by contacting the maintainers at `sterlenjohnson@example.com`. All complaints will be reviewed and investigated and will result in a response that is deemed necessary and appropriate to the circumstances.
 
 ## Attribution
 
