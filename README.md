@@ -451,6 +451,33 @@ Configure models via the LM Studio CLI before enabling headless mode:
 
 # Load a specific model
 ~/.cache/lm-studio/bin/lms load <model-identifier>
+
+### Desktop Integration (Hybrid Mode)
+If you use the desktop GUI frequently, you can install a "Hybrid" launcher that automatically stops the headless service when you open the GUI and restarts it when you close it.
+
+1.  **Copy the launcher script**:
+    ```bash
+    sudo cp scripts/launch-gui.sh /opt/lmstudio/
+    sudo chmod +x /opt/lmstudio/launch-gui.sh
+    ```
+
+2.  **Install the Desktop Shortcut**:
+    ```bash
+    # Copy the .desktop file to your applications folder
+    sudo cp systemd/lm-studio-gui.desktop /usr/share/applications/
+    ```
+
+3.  **Use it**:
+    Search for "LM Studio (Hybrid)" in your application menu. When you click it:
+    - It will ask for your password (to stop the service).
+    - It will open LM Studio.
+    - When you close LM Studio, it will automatically restart the background service.
+
+### Conflict with Desktop GUI
+If you are running this on a desktop Linux environment, you cannot run the LM Studio GUI and this headless service simultaneously.
+- **Symptom**: The GUI won't open, or the window keeps popping to the foreground.
+- **Solution**: Stop the service before opening the GUI: `sudo systemctl stop lmstudio.service`.
+- **Note**: The service is configured with `Restart=on-failure` to prevent restart loops if the GUI is already running.
 ```
 
 ---

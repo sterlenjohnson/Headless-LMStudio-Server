@@ -24,6 +24,11 @@ fi
 # 2. Stop Service
 echo "Stopping LM Studio service..."
 systemctl stop lmstudio.service
+if systemctl is-active --quiet lmstudio.service; then
+    echo "$(date): Failed to stop service. Aborting update." | tee -a "$INSTALL_DIR/update.log"
+    rm -f "$NEW_FILE.tmp"
+    exit 1
+fi
 
 # 3. Backup & Replace
 echo "Creating backup and replacing AppImage..."
@@ -41,7 +46,13 @@ echo "Fixing permissions..."
 chown -R $SERVICE_USER:$SERVICE_USER "$INSTALL_DIR"
 
 # 6. Restart Service
-echo "Restarting LM Studio service..."
-systemctl start lmstudio.service
+# Check if the GUI is running (prevent conflict with Hybrid mode)
+# Since we stopped the service above, any running 'lm-studio' process must be the GUI.
+if pgrep -x "lm-studio" > /dev/null; then
+    echo "$(date): LM Studio GUI is running. Skipping service restart." | tee -a "$INSTALL_DIR/update.log"
+else
+    echo "Restarting LM Studio service..."
+    systemctl start lmstudio.service
+fi
 
 echo "$(date): Update Complete." | tee -a "$INSTALL_DIR/update.log"
