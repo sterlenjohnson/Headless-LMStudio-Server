@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=LM Studio (Hybrid)
+Comment=Launch LM Studio GUI in hybrid mode - temporarily stops headless service
+Exec=/opt/lmstudio/launch-gui.sh
+Icon=application-x-executable
+Type=Application
+Categories=Development;Science;AI;Graphics;
+StartupNotify=true
+Terminal=true
