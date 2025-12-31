@@ -1,244 +1,138 @@
 #!/bin/bash
 
-# LM Studio Launcher
-# ------------------
-# A script to manage launching one or two instances of LM Studio,
-# in either GUI or headless mode, with persistent settings.
+# ==============================================================================
+#
+# LM Studio Launcher - Function Library
+#
+# This script is NOT meant to be executed directly. It is a library of
+# functions to be sourced by other wrapper scripts.
+#
+# ==============================================================================
+
 
 # --- Load Configuration ---
+# This sources the config file from the same directory as the library.
 CONFIG_PATH="$(dirname "$0")/lms-launcher.conf"
 if [ -f "$CONFIG_PATH" ]; then
     source "$CONFIG_PATH"
 else
     echo "Error: Configuration file not found at '$CONFIG_PATH'!"
-    echo "Please ensure 'lms-launcher.conf' is in the same directory as this script."
     exit 1
 fi
 
-# --- Global Variables ---
-SERVICE_NAME="lmstudio.service"
-WAS_RUNNING=0
-SECONDARY_HOME_FULL_PATH="$HOME/$SECONDARY_HOME_NAME"
+
+# --- State Variables ---
+# These are used by the functions to track state.
+_SERVICE_NAME="lmstudio.service"
+_WAS_RUNNING=0
+_LAUNCHED_PIDS=()
+_SECONDARY_HOME_FULL_PATH="$HOME/$SECONDARY_HOME_NAME"
+
 
 # --- Function Definitions ---
 
-# Pre-flight check for required executables
-check_deps() {
-    if ! command -v xvfb-run &> /dev/null; then
-        echo "Warning: 'xvfb-run' is not installed."
-        echo "Headless mode will not be available. Please install it to enable."
-        echo "On Debian/Ubuntu: sudo apt-get install xvfb"
-        echo "On Fedora: sudo dnf install xorg-x11-server-Xvfb"
-        XVFB_AVAILABLE=0
-    else
-        XVFB_AVAILABLE=1
-    fi
-
+# _check_dependencies: Ensures AppImage and xvfb-run (for headless) exist.
+function _check_dependencies() {
     if [ ! -f "$APPIMAGE_PATH" ]; then
         echo "Error: LM Studio AppImage not found at '$APPIMAGE_PATH'"
         echo "Please check the APPIMAGE_PATH in '$CONFIG_PATH'."
         exit 1
     fi
-}
 
-# Stop the systemd service if it's running to prevent conflicts
-handle_service_conflict() {
-    if systemctl is-active --quiet "$SERVICE_NAME"; then
-        echo "The systemd service '$SERVICE_NAME' is currently active."
-        read -p "Stop it to continue with manual launch? (y/n) " -n 1 -r
-        echo ""
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            echo "Stopping '$SERVICE_NAME'..."
-            if sudo systemctl stop "$SERVICE_NAME"; then
-                echo "Service stopped successfully."
-                WAS_RUNNING=1
-            else
-                echo "Failed to stop '$SERVICE_NAME'. You may need sudo privileges."
-                echo "Exiting to prevent conflicts."
-                exit 1
-            fi
-        else
-            echo "Exiting. The '$SERVICE_NAME' is still running."
-            exit 0
-        fi
-        echo ""
-    fi
-}
-
-# launch_gui(port, home_dir)
-launch_gui() {
-    local port=$1
-    local home_dir=$2
-
-    echo "Launching GUI instance on port $port..."
-    if [ -n "$home_dir" ]; then
-        mkdir -p "$home_dir"
-        env HOME="$home_dir" "$APPIMAGE_PATH" --port "$port" &
-    else
-        "$APPIMAGE_PATH" --port "$port" &
-    fi
-}
-
-# launch_headless(port, home_dir)
-launch_headless() {
-    if [ "$XVFB_AVAILABLE" -eq 0 ]; then
-        echo "Cannot launch in headless mode: xvfb-run is not available."
+    if ! command -v xvfb-run &> /dev/null; then
+        echo "Warning: 'xvfb-run' is not installed. Headless mode will not be available."
         return 1
     fi
+    return 0
+}
 
-    local port=$1
-    local home_dir=$2
-    
-    echo "Launching headless instance on port $port..."
-    if [ -n "$home_dir" ]; then
-        mkdir -p "$home_dir"
-        env HOME="$home_dir" xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' "$APPIMAGE_PATH" --headless --port "$port" &
+# _stop_service_if_active: Checks for the main systemd service and stops it.
+function _stop_service_if_active() {
+    if systemctl is-active --quiet "$_SERVICE_NAME"; then
+        echo "The systemd service '$_SERVICE_NAME' is currently active."
+        # Interactively ask for permission only if we are in a terminal
+        if [ -t 1 ]; then
+            read -p "Stop it to continue with manual launch? (y/n) " -n 1 -r
+            echo ""
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo "Exiting. The '$_SERVICE_NAME' is still running."
+                exit 0
+            fi
+        fi
+
+        echo "Stopping '$_SERVICE_NAME'..."
+        if sudo systemctl stop "$_SERVICE_NAME"; then
+            echo "Service stopped successfully."
+            _WAS_RUNNING=1
+        else
+            echo "Failed to stop '$_SERVICE_NAME'. You may need sudo privileges."
+            echo "Exiting to prevent conflicts."
+            exit 1
+        fi
     else
-        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' "$APPIMAGE_PATH" --headless --port "$port" &
+        _WAS_RUNNING=0
     fi
+    echo ""
 }
 
-show_instructions() {
-    echo ""
+# _launch_primary_gui: Launches the primary instance in GUI mode.
+function _launch_primary_gui() {
+    echo "Launching Primary GUI instance on port $PRIMARY_PORT..."
+    "$APPIMAGE_PATH" --port "$PRIMARY_PORT" &
+    _LAUNCHED_PIDS+=($!)
+}
+
+# _launch_secondary_gui: Launches the isolated secondary instance in GUI mode.
+function _launch_secondary_gui() {
+    echo "Launching Secondary GUI instance (Isolated) on port $SECONDARY_PORT..."
+    mkdir -p "$_SECONDARY_HOME_FULL_PATH"
+    env HOME="$_SECONDARY_HOME_FULL_PATH" "$APPIMAGE_PATH" --port "$SECONDARY_PORT" &
+    _LAUNCHED_PIDS+=($!)
     echo "---"
-    echo "IMPORTANT: For any ISOLATED (Secondary) instance, you must configure the model folder:"
-    echo "1. In the new LM Studio window, go to Settings > General."
-    echo "2. Change 'Models Folder' to: $DEFAULT_MODEL_PATH"
+    echo "IMPORTANT: In the 'Secondary' window, set the 'Models Folder' to:"
+    echo "$DEFAULT_MODEL_PATH"
     echo "---"
-    echo ""
 }
 
-# --- Main Menu ---
-main_menu() {
-    echo "========================================"
-    echo "        LM Studio Launcher"
-    echo "========================================"
-    echo "  Single Instance"
-    echo "    1) Launch Primary Instance (GUI)"
-    echo "    2) Launch Secondary Instance (GUI, Isolated)"
-    if [ "$XVFB_AVAILABLE" -eq 1 ]; then
-        echo "    3) Launch Primary Instance (Headless)"
-        echo "    4) Launch Secondary Instance (Headless, Isolated)"
-    fi
-    echo ""
-    echo "  Dual Instances"
-    echo "    5) Launch Dual Instances (GUI)"
-    if [ "$XVFB_AVAILABLE" -eq 1 ]; then
-        echo "    6) Launch Dual Instances (Headless)"
-    fi
-    echo ""
-    echo "  q) Quit"
-    echo "----------------------------------------"
-    read -p "Enter your choice: " choice
-    echo ""
-
-    case $choice in
-        1)
-            launch_gui "$PRIMARY_PORT"
-            ;;
-        2)
-            launch_gui "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-            show_instructions
-            ;;
-        3)
-            [ "$XVFB_AVAILABLE" -eq 1 ] && launch_headless "$PRIMARY_PORT" || echo "Invalid choice."
-            ;;
-        4)
-            [ "$XVFB_AVAILABLE" -eq 1 ] && {
-                launch_headless "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-                show_instructions
-            } || echo "Invalid choice."
-            ;;
-        5)
-            echo "--- Launching Dual GUI Instances ---"
-            launch_gui "$PRIMARY_PORT"
-            sleep 1
-            launch_gui "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-            show_instructions
-            ;;
-        6)
-            if [ "$XVFB_AVAILABLE" -eq 1 ]; then
-                echo "--- Launching Dual Headless Instances ---"
-                launch_headless "$PRIMARY_PORT"
-                sleep 1
-                launch_headless "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-                show_instructions
-            else
-                echo "Invalid choice."
-            fi
-            ;;
-        q|Q)
-            echo "Exiting."
-            exit 0
-            ;;
-        *)
-            echo "Invalid choice. Please try again."
-            ;;
-    esac
-    echo "Launch command issued. Instances are running in the background."
-    echo ""
+# _launch_primary_headless: Launches the primary instance in headless mode.
+function _launch_primary_headless() {
+    _check_dependencies || return 1
+    echo "Launching Primary Headless instance on port $PRIMARY_PORT..."
+    xvfb-run --auto-servernum -d "$APPIMAGE_PATH" --headless --port "$PRIMARY_PORT" &
+     _LAUNCHED_PIDS+=($!)
 }
 
-# --- Script Start ---
-check_deps
-handle_service_conflict
+# _launch_secondary_headless: Launches the isolated secondary instance in headless mode.
+function _launch_secondary_headless() {
+    _check_dependencies || return 1
+    echo "Launching Secondary Headless instance (Isolated) on port $SECONDARY_PORT..."
+    mkdir -p "$_SECONDARY_HOME_FULL_PATH"
+    env HOME="$_SECONDARY_HOME_FULL_PATH" xvfb-run --auto-servernum -d "$APPIMAGE_PATH" --headless --port "$SECONDARY_PORT" &
+    _LAUNCHED_PIDS+=($!)
+}
 
-# If a command-line argument is provided, execute it directly. Otherwise, show the menu.
-if [ -n "$1" ]; then
-    case "$1" in
-        --primary-gui)
-            launch_gui "$PRIMARY_PORT"
-            ;;
-        --secondary-gui)
-            launch_gui "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-            show_instructions
-            ;;
-        --primary-headless)
-            [ "$XVFB_AVAILABLE" -eq 1 ] && launch_headless "$PRIMARY_PORT" || echo "Headless mode not available."
-            ;;
-        --secondary-headless)
-            [ "$XVFB_AVAILABLE" -eq 1 ] && {
-                launch_headless "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-                show_instructions
-            } || echo "Headless mode not available."
-            ;;
-        --dual-gui)
-            echo "--- Launching Dual GUI Instances ---"
-            launch_gui "$PRIMARY_PORT"
-            sleep 1
-            launch_gui "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-            show_instructions
-            ;;
-        --dual-headless)
-            if [ "$XVFB_AVAILABLE" -eq 1 ]; then
-                echo "--- Launching Dual Headless Instances ---"
-                launch_headless "$PRIMARY_PORT"
-                sleep 1
-                launch_headless "$SECONDARY_PORT" "$SECONDARY_HOME_FULL_PATH"
-                show_instructions
-            else
-                echo "Headless mode not available."
-            fi
-            ;;
-        *)
-            echo "Invalid argument: $1"
-            echo "Running in interactive mode instead..."
-            main_menu
-            ;;
-    esac
-    echo "Launch command issued. Instances are running in the background."
+# _wait_for_launched_pids: Waits for all launched processes to exit.
+function _wait_for_launched_pids() {
+    if [ ${#_LAUNCHED_PIDS[@]} -gt 0 ]; then
+        echo ""
+        echo "Launcher is running. Waiting for all LM Studio windows to be closed..."
+        echo "Press Ctrl+C in this terminal to close all instances."
+        wait "${_LAUNCHED_PIDS[@]}"
+    fi
+}
+
+# _restart_service_if_stopped: Restarts the main systemd service if it was stopped earlier.
+function _restart_service_if_stopped() {
     echo ""
-else
-    main_menu
-fi
-
-
-if [ "$WAS_RUNNING" -eq 1 ]; then
-    echo "------------------------------------------------------------------"
-    echo "The '$SERVICE_NAME' service was stopped by this script."
-    echo "To restart it when you are finished, run:"
-    echo "  sudo systemctl start $SERVICE_NAME"
-    echo "------------------------------------------------------------------"
-fi
-
-exit 0
+    if [ "$_WAS_RUNNING" -eq 1 ]; then
+        echo "All LM Studio windows closed."
+        echo "Restarting the '$_SERVICE_NAME' service..."
+        if sudo systemctl start "$_SERVICE_NAME"; then
+            echo "Service restarted successfully."
+        else
+            echo "Failed to restart '$_SERVICE_NAME'. Please check system logs."
+        fi
+    else
+        echo "Exiting."
+    fi
+}
