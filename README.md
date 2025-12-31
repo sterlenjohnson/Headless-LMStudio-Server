@@ -407,6 +407,87 @@ If you use the desktop GUI frequently, you can install a "Hybrid" launcher that 
 
 ---
 
+## 🚀 Advanced Usage: Dual Instance Launcher
+
+For users who need to run multiple instances of LM Studio simultaneously (e.g., a CPU-only model and a GPU-intensive model), this repository now includes an advanced launcher script.
+
+The `scripts/lms-launcher.sh` script provides a powerful, interactive way to manage single or dual instances in either GUI or Headless mode.
+
+### Features
+
+- **Interactive Menu**: Simply run the script to get a menu of launch options.
+- **Dual Instance Support**: Launch two instances of LM Studio at once.
+- **Profile Isolation**: The secondary instance runs in a separate environment, preventing settings, models, and UI state from conflicting with the primary instance.
+- **GUI & Headless Modes**: Choose the mode for each launch scenario.
+- **Persistent Configuration**: All paths and ports are configured in `scripts/lms-launcher.conf`.
+- **Systemd Conflict Management**: Automatically detects and offers to stop the default `lmstudio.service` to prevent conflicts.
+- **Direct Launch Arguments**: Bypass the interactive menu to directly launch a specific configuration, ideal for desktop shortcuts or other scripts.
+
+### Configuration (`lms-launcher.conf`)
+
+All settings for the launcher are controlled in `scripts/lms-launcher.conf`. This allows you to easily change ports and paths without editing the main script.
+
+```bash
+# scripts/lms-launcher.conf
+
+# Path to the LM Studio AppImage.
+APPIMAGE_PATH="/opt/lmstudio/LM-Studio-latest.AppImage"
+
+# The port for the primary ("Instance 1") instance.
+PRIMARY_PORT="1234"
+
+# The port for the secondary ("Instance 2") instance.
+SECONDARY_PORT="1235"
+
+# The name of the directory for the isolated "Secondary" instance.
+SECONDARY_HOME_NAME="lms-secondary-home"
+
+# Path to your shared models folder for on-screen instructions.
+DEFAULT_MODEL_PATH="~/.cache/lm-studio/models"
+```
+
+### How to Use
+
+#### 1. Interactive Mode
+
+Navigate to the repository directory and run the script.
+
+```bash
+cd Headless-LMStudio-Server
+./scripts/lms-launcher.sh
+```
+
+This will present a menu with all available launch options.
+
+#### 2. Direct Launch Mode
+
+You can also launch a configuration directly by providing an argument. This is used by the new `.desktop` and `.service` files.
+
+**Example**: Launch the dual GUI configuration directly.
+```bash
+./scripts/lms-launcher.sh --dual-gui
+```
+
+Available arguments include:
+- `--primary-gui`
+- `--secondary-gui`
+- `--primary-headless`
+- `--secondary-headless`
+- `--dual-gui`
+- `--dual-headless`
+
+### New System Files
+
+The launcher is integrated with new `systemd` and `.desktop` files, which you can optionally install:
+
+- **`systemd/lm-studio-dual-gui.desktop`**: A desktop shortcut that directly launches the dual GUI mode.
+- **`systemd/lmstudio-primary.service`**: A systemd service to run only the primary headless instance on boot.
+- **`systemd/lmstudio-secondary.service`**: A systemd service to run only the secondary headless instance on boot.
+
+These services include a `Conflicts` directive, so enabling one (e.g., `lmstudio-primary.service`) will automatically disable the others (like `lmstudio.service` and `lmstudio-secondary.service`).
+
+---
+
 ## 🔍 Troubleshooting
 
 ### View Service Logs

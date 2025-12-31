@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=LM Studio (Dual GUI)
+Comment=Launches two isolated LM Studio GUI instances (Primary and Secondary).
+Exec=/home/sterl/Downloads/Headless-LMStudio-Server-main/scripts/lms-launcher.sh --dual-gui
+Icon=lm-studio
+Type=Application
+Categories=Development;Science;AI;Graphics;
+StartupNotify=true
+Terminal=true
