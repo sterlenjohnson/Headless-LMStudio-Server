@@ -69,18 +69,14 @@ handle_service_conflict() {
 launch_gui() {
     local port=$1
     local home_dir=$2
-    local cmd_str
 
-    if [ -n "$home_dir" ]; then
+    echo "Launching GUI instance on port $port..."
+    if [ -n "$home_dir" ]; {
         mkdir -p "$home_dir"
-        cmd_str="env HOME='$home_dir' '$APPIMAGE_PATH' --port '$port'"
-        echo "Launching isolated instance on port $port..."
-    else
-        cmd_str="'$APPIMAGE_PATH' --port '$port'"
-        echo "Launching standard instance on port $port..."
-    fi
-    
-    eval "$cmd_str &"
+        env HOME="$home_dir" "$APPIMAGE_PATH" --port "$port" &
+    } else {
+        "$APPIMAGE_PATH" --port "$port" &
+    }
 }
 
 # launch_headless(port, home_dir)
@@ -92,20 +88,14 @@ launch_headless() {
 
     local port=$1
     local home_dir=$2
-    local cmd_str
-
-    local xvfb_cmd="xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24'"
-
+    
+    echo "Launching headless instance on port $port..."
     if [ -n "$home_dir" ]; then
         mkdir -p "$home_dir"
-        cmd_str="env HOME='$home_dir' $xvfb_cmd '$APPIMAGE_PATH' --headless --port '$port'"
-        echo "Launching isolated headless instance on port $port..."
+        env HOME="$home_dir" xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' "$APPIMAGE_PATH" --headless --port "$port" &
     else
-        cmd_str="$xvfb_cmd '$APPIMAGE_PATH' --headless --port '$port'"
-        echo "Launching standard headless instance on port $port..."
+        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' "$APPIMAGE_PATH" --headless --port "$port" &
     fi
-
-    eval "$cmd_str &"
 }
 
 show_instructions() {
