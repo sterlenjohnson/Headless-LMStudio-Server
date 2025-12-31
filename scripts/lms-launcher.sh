@@ -71,12 +71,12 @@ launch_gui() {
     local home_dir=$2
 
     echo "Launching GUI instance on port $port..."
-    if [ -n "$home_dir" ]; {
+    if [ -n "$home_dir" ]; then
         mkdir -p "$home_dir"
         env HOME="$home_dir" "$APPIMAGE_PATH" --port "$port" &
-    } else {
+    else
         "$APPIMAGE_PATH" --port "$port" &
-    }
+    fi
 }
 
 # launch_headless(port, home_dir)
