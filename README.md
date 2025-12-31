@@ -407,84 +407,55 @@ If you use the desktop GUI frequently, you can install a "Hybrid" launcher that 
 
 ---
 
-## 🚀 Advanced Usage: Dual Instance Launcher
+## 🚀 Advanced Usage: Python-Based Launcher
 
-For users who need to run multiple instances of LM Studio simultaneously (e.g., a CPU-only model and a GPU-intensive model), this repository now includes an advanced launcher script.
+For users who need to run multiple instances of LM Studio simultaneously, this repository now includes a robust, Python-based script caller. This system provides a more reliable and maintainable way to manage instances compared to the previous shell scripts.
 
-The `scripts/lms-launcher.sh` script provides a powerful, interactive way to manage single or dual instances in either GUI or Headless mode.
+![Dual GUI Mode](images/dual_gui_same_model.png)
+*An example of two LM Studio instances running side-by-side, managed by the launcher.*
 
-### Features
+### How It Works
 
-- **Interactive Menu**: Simply run the script to get a menu of launch options.
-- **Dual Instance Support**: Launch two instances of LM Studio at once.
-- **Profile Isolation**: The secondary instance runs in a separate environment, preventing settings, models, and UI state from conflicting with the primary instance.
-- **GUI & Headless Modes**: Choose the mode for each launch scenario.
-- **Persistent Configuration**: All paths and ports are configured in `scripts/lms-launcher.conf`.
-- **Systemd Conflict Management**: Automatically detects and offers to stop the default `lmstudio.service` to prevent conflicts.
-- **Direct Launch Arguments**: Bypass the interactive menu to directly launch a specific configuration, ideal for desktop shortcuts or other scripts.
-
-### Configuration (`lms-launcher.conf`)
-
-All settings for the launcher are controlled in `scripts/lms-launcher.conf`. This allows you to easily change ports and paths without editing the main script.
-
-```bash
-# scripts/lms-launcher.conf
-
-# Path to the LM Studio AppImage.
-APPIMAGE_PATH="/opt/lmstudio/LM-Studio-latest.AppImage"
-
-# The port for the primary ("Instance 1") instance.
-PRIMARY_PORT="1234"
-
-# The port for the secondary ("Instance 2") instance.
-SECONDARY_PORT="1235"
-
-# The name of the directory for the isolated "Secondary" instance.
-SECONDARY_HOME_NAME="lms-secondary-home"
-
-# Path to your shared models folder for on-screen instructions.
-DEFAULT_MODEL_PATH="~/.cache/lm-studio/models"
-```
+- **`scripts/launcher.py`**: A single script that acts as the main entrypoint for all launch commands.
+- **`scripts/lms-launcher.conf`**: A configuration file for ports and paths.
 
 ### How to Use
 
-#### 1. Interactive Mode
+The launcher is controlled via command-line arguments.
 
-Navigate to the repository directory and run the script.
-
+**Command Structure:**
 ```bash
-cd Headless-LMStudio-Server
-./scripts/lms-launcher.sh
+python3 scripts/launcher.py launch <INSTANCE> <MODE>
 ```
 
-This will present a menu with all available launch options.
+**Arguments:**
+- **`INSTANCE`**:
+  - `primary`: The standard, default instance.
+  - `secondary`: The isolated instance with its own configuration profile.
+  - `dual`: Launches both the primary and secondary instances.
+- **`MODE`**:
+  - `gui`: Launches the graphical user interface.
+  - `headless`: Launches in headless server mode (requires `xvfb`).
 
-#### 2. Direct Launch Mode
-
-You can also launch a configuration directly by providing an argument. This is used by the new `.desktop` and `.service` files.
-
-**Example**: Launch the dual GUI configuration directly.
+**Examples:**
 ```bash
-./scripts/lms-launcher.sh --dual-gui
+# Launch both instances in GUI mode
+python3 scripts/launcher.py launch dual gui
+
+# Launch only the secondary instance in headless mode
+python3 scripts/launcher.py launch secondary headless
 ```
 
-Available arguments include:
-- `--primary-gui`
-- `--secondary-gui`
-- `--primary-headless`
-- `--secondary-headless`
-- `--dual-gui`
-- `--dual-headless`
+### ⚠️ Important: Secondary Instance Configuration
 
-### New System Files
+When you launch the `secondary` or `dual` instance for the first time, you **must manually configure its model directory** to avoid re-downloading all your models.
 
-The launcher is integrated with new `systemd` and `.desktop` files, which you can optionally install:
+1.  In the new "Secondary" LM Studio window, go to **Settings > General**.
+2.  Change the **"Models Folder"** path to point to your original models folder (e.g., `~/.cache/lm-studio/models`).
 
-- **`systemd/lm-studio-dual-gui.desktop`**: A desktop shortcut that directly launches the dual GUI mode.
-- **`systemd/lmstudio-primary.service`**: A systemd service to run only the primary headless instance on boot.
-- **`systemd/lmstudio-secondary.service`**: A systemd service to run only the secondary headless instance on boot.
+### Desktop & Service Integration
 
-These services include a `Conflicts` directive, so enabling one (e.g., `lmstudio-primary.service`) will automatically disable the others (like `lmstudio.service` and `lmstudio-secondary.service`).
+The `.desktop` and `.service` files have been updated to use this new Python launcher, ensuring correct and reliable behavior.
 
 ---
 

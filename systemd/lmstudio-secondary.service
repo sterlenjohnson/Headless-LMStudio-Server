@@ -13,7 +13,7 @@ User=<YOUR_USERNAME>
 Group=<YOUR_USERNAME>
 
 # The script that runs the application with the specific argument
-ExecStart=/home/sterl/Downloads/Headless-LMStudio-Server-main/scripts/lms-launcher.sh --secondary-headless
+ExecStart=python3 /path/to/Headless-LMStudio-Server-main/scripts/launcher.py launch secondary headless
 
 # Restart automatically if it crashes
 Restart=on-failure
